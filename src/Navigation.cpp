@@ -33,9 +33,9 @@
 using namespace std;
 
 
-
+typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> Client;
 static string dest="OPRS_SUP";
-
+Client client("move_base",true);
 /**
    Get the next number in the message, skipping spaces. Takes as input the message and the current position, returning a float with the number and updating the position included in i accordingly.   
  */
@@ -54,7 +54,10 @@ float getNextNumber(char *message, int *i) {
 
 vector<geometry_msgs::PoseStamped> getMoveMessage(char * message, int i) {
     //we start getting the mode of the message
-    
+  
+  
+  vector<geometry_msgs::PoseStamped>  posesStamped;
+
     string mode;
     while (message[i]!=' ') { 
 	mode=mode+message[i];  
@@ -125,7 +128,8 @@ vector<geometry_msgs::PoseStamped> getMoveMessage(char * message, int i) {
 
 
 
-void moveRobot(vector<PoseStamped> posesStamped, Client client) {
+void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped) {
+
 
     ROS_INFO("ready to navigate");
     //nowe we are actually going to send this stuff to move_base and update the supervisor step by step     
@@ -169,7 +173,7 @@ void moveRobot(vector<PoseStamped> posesStamped, Client client) {
 
 
 
-typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> Client;
+
 
 int main(int argc, char **argv) {
     //SET ROS 
@@ -177,7 +181,7 @@ int main(int argc, char **argv) {
     ROS_INFO("starting navigation");  
   
     //Set move_base
-    Client client("move_base",true);
+
     client.waitForServer();
     ROS_INFO("connected to move_base");
 
@@ -213,12 +217,13 @@ int main(int argc, char **argv) {
 	    else if (status!="moving") {
 		
 		vector<geometry_msgs::PoseStamped> posesStamped=getMoveMessage(message,i);
-		moveRobotThread=new boost::thread(moveRobot,posesStamped, client);
+		moveRobotThread=new boost::thread(moveRobot,posesStamped);
 	    }
 	}
-	else {
-	    ROS_INFO("error in connecting to the message passer. Closing the node");
-	    return 0;
-	}
+    }
+    else {
+      ROS_INFO("error in connecting to the message passer. Closing the node");
+      return 0;
     }
 }
+
