@@ -35,7 +35,7 @@ using namespace std;
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> Client;
 static string dest="OPRS_SUP";
-Client client("move_base",true);
+
 /**
    Get the next number in the message, skipping spaces. Takes as input the message and the current position, returning a float with the number and updating the position included in i accordingly.   
  */
@@ -120,6 +120,8 @@ vector<geometry_msgs::PoseStamped> getMoveMessage(char * message, int i) {
 	ROS_INFO("%c", message[i]);
 
 	posesStamped.push_back(aPoseStamped);
+
+	return posesStamped;
     }
 }
 
@@ -128,7 +130,7 @@ vector<geometry_msgs::PoseStamped> getMoveMessage(char * message, int i) {
 
 
 
-void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped) {
+void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped, Client *client) {
 
 
     ROS_INFO("ready to navigate");
@@ -139,23 +141,23 @@ void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped) {
     for (int i=0; i<n && response!="FAILURE"; i++) {
 	move_base_msgs::MoveBaseGoal goal;
 	goal.target_pose=posesStamped[i];
-	client.sendGoal(goal);
+	client->sendGoal(goal);
 	ROS_INFO("goal sent %f %f",goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 	ROS_INFO("goal sent %f %f",posesStamped[i].pose.position.x, posesStamped[i].pose.position.y);
-	client.waitForResult(ros::Duration(5.0));
-	ROS_INFO("received response %s", client.getState().toString().c_str());
-	while (client.getState() == actionlib::SimpleClientGoalState::ACTIVE) {
+	client->waitForResult(ros::Duration(5.0));
+	ROS_INFO("received response %s", client->getState().toString().c_str());
+	while (client->getState() == actionlib::SimpleClientGoalState::ACTIVE) {
 
-	    client.waitForResult(ros::Duration(5.0));
+	    client->waitForResult(ros::Duration(5.0));
 	}
-	ROS_INFO("%s", client.getState().toString().c_str());
-	if (client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED )
+	ROS_INFO("%s", client->getState().toString().c_str());
+	if (client->getState() == actionlib::SimpleClientGoalState::SUCCEEDED )
 	    response="OK";
 	else {
 	    response="FAILURE";
 	}
 	//we update the supervisor with the current position
-	printf("Current State: %s\n", client.getState().toString().c_str());
+	printf("Current State: %s\n", client->getState().toString().c_str());
 	string strmessage="(Navigation.update "+response+")";
 	char returnMessage[50];
 	strcpy(returnMessage,strmessage.c_str());
@@ -178,6 +180,8 @@ void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped) {
 int main(int argc, char **argv) {
     //SET ROS 
     ros::init(argc, argv, "Navigation");
+
+Client client("move_base",true);
     ROS_INFO("starting navigation");  
   
     //Set move_base
@@ -204,12 +208,14 @@ int main(int argc, char **argv) {
 	    ROS_INFO("message %s",message);
 	    int i=0;   
 	    //first we get the command of the robot
-	    string command;
-	    while (message[i]==' ') {
-		i++;   
-		command+=message[i];
-	    }
+	    string command="";
 	    i++;
+	    while (message[i]!=' ' && message[i]!=')') {
+	      command+=message[i];
+		i++;   
+	    }
+
+	    std::cout<<"command "<<command<<"\n";
 	    if (command=="stop") {
 		client.cancelGoal();
 		status="not moving";
@@ -217,7 +223,7 @@ int main(int argc, char **argv) {
 	    else if (status!="moving") {
 		
 		vector<geometry_msgs::PoseStamped> posesStamped=getMoveMessage(message,i);
-		moveRobotThread=new boost::thread(moveRobot,posesStamped);
+		moveRobotThread=new boost::thread(moveRobot,posesStamped, &client);
 	    }
 	}
     }
