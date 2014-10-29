@@ -4,7 +4,7 @@
    BaseActions.update  and BaseActions.response messages.
 
    (move @mode @coordinates)
-   (stop goal)
+   (stop)
    @mode =  euler or quaternion
    
    @coordinates (. (. x1 y1 z1 tx1 ty1 tz1 w1 .) (. x2 y2 z2 w1 tx2 ty2 tz2 w2 .) ... (. xn yn zn txn tym tzn wn .) .)  or
@@ -158,14 +158,14 @@ void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped, Client *client) 
 	}
 	//we update the supervisor with the current position
 	printf("Current State: %s\n", client->getState().toString().c_str());
-	string strmessage="(Navigation.update "+response+")";
+	string strmessage="(Navigation.move.update "+response+")";
 	char returnMessage[50];
 	strcpy(returnMessage,strmessage.c_str());
 	ROS_INFO("Return message %s",returnMessage);
 	send_message_string(returnMessage,dest.c_str());
     }
     //and when we have finished give a final update 
-    string strmessage="(Navigation.report "+response+")";
+    string strmessage="(Navigation.move.report "+response+")";
     char returnMessage[50];
     strcpy(returnMessage,strmessage.c_str());
     ROS_INFO("Return message %s",returnMessage);
@@ -219,6 +219,11 @@ Client client("move_base",true);
 	    if (command=="stop") {
 		client.cancelGoal();
 		status="not moving";
+    string strmessage="(Navigation.stop.report OK)";
+    char returnMessage[50];
+    strcpy(returnMessage,strmessage.c_str());
+    ROS_INFO("Return message %s",returnMessage);
+    send_message_string(returnMessage,dest.c_str());
 	    }
 	    else if (status!="moving") {
 		
