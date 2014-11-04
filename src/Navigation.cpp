@@ -142,7 +142,7 @@ void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped, Client *client) 
 	move_base_msgs::MoveBaseGoal goal;
 	goal.target_pose=posesStamped[i];
 	client->sendGoal(goal);
-	ROS_INFO("goal sent %f %f",goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
+	ROS_INFO("goal sent %f %f %f %f %f %f",goal.target_pose.pose.position.x, goal.target_pose.pose.position.y, goal.target_pose.pose.orientation.x , goal.target_pose.pose.orientation.y , goal.target_pose.pose.orientation.z , goal.target_pose.pose.orientation.w);
 	ROS_INFO("goal sent %f %f",posesStamped[i].pose.position.x, posesStamped[i].pose.position.y);
 	client->waitForResult(ros::Duration(5.0));
 	ROS_INFO("received response %s", client->getState().toString().c_str());
