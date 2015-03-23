@@ -4,6 +4,7 @@
    BaseActions.update  and BaseActions.response messages.
 
    (move @mode @coordinates)
+   (moveSeconds @seconds @direction)
    (stop)
    @mode =  euler or quaternion
    
@@ -29,11 +30,15 @@
 #include <move_base_msgs/MoveBaseAction.h>
 #include <tf/transform_datatypes.h>
 #include <boost/thread/thread.hpp>
+#include "geometry_msgs/Twist.h"
 
 using namespace std;
 
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> Client;
+ros::Publisher cmd_vel_pub_;
+
+
 static string dest="OPRS_SUP";
 
 /**
@@ -173,6 +178,44 @@ void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped, Client *client) 
     
 }
 
+void timedMove(double seconds, char direction) {
+
+   //we will be sending commands of type "twist"
+    geometry_msgs::Twist base_cmd;
+
+    if (direction=='f') {
+        base_cmd.linear.x=0.2;
+    }
+    else if (direction=='b') {
+        base_cmd.linear.x=-0.2;
+    }
+    else if (direction=='l') {
+        base_cmd.linear.y=-0.2;
+    }
+    else if (direction=='r') {
+        base_cmd.linear.y=0.2;
+    }
+
+    cmd_vel_pub_.publish(base_cmd);
+
+    //Get the time and store it in the time variable.
+    ros::Time time = ros::Time::now();
+//Wait a duration of one second.
+    ros::Duration d = ros::Duration(seconds);
+    d.sleep();
+
+    base_cmd.linear.x=0;
+    base_cmd.linear.y=0;
+    cmd_vel_pub_.publish(base_cmd);
+
+    string strmessage="(Navigation.moveSeconds.report OK)";
+    char returnMessage[50];
+    strcpy(returnMessage,strmessage.c_str());
+    ROS_INFO("Return message %s",returnMessage);
+    send_message_string(returnMessage,dest.c_str());
+
+}
+
 
 
 
@@ -180,57 +223,78 @@ void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped, Client *client) 
 int main(int argc, char **argv) {
     //SET ROS 
     ros::init(argc, argv, "Navigation");
+    ros::NodeHandle n;
 
-Client client("move_base",true);
+
+    Client client("move_base",true);
     ROS_INFO("starting navigation");  
   
     //Set move_base
-
     client.waitForServer();
     ROS_INFO("connected to move_base");
 
+    cmd_vel_pub_ = n.advertise<geometry_msgs::Twist>("/base_controller/command", 1);
+
     boost::thread *moveRobotThread;
     string status="not moving";
+
+
 
     //connect to openprs
     int mpSocket=external_register_to_the_mp_prot("Navigation", 3300, STRINGS_PT);
     if (mpSocket!=-1) {
 
-	while (ros::ok()) {
+        while (ros::ok()) {
 
-	    ROS_INFO("connected to the message parser");
+            ROS_INFO("connected to the message parser");
       
-	    //read the openprs message
-	    int length;
-	    char *sender=read_string_from_socket(mpSocket,&length);
-	    char *message=read_string_from_socket(mpSocket,&length);
+            //read the openprs message
+            int length;
+            char *sender=read_string_from_socket(mpSocket,&length);
+            char *message=read_string_from_socket(mpSocket,&length);
       
-	    ROS_INFO("message %s",message);
-	    int i=0;   
-	    //first we get the command of the robot
-	    string command="";
-	    i++;
-	    while (message[i]!=' ' && message[i]!=')') {
-	      command+=message[i];
-		i++;   
-	    }
+            ROS_INFO("message %s",message);
+            int i=0;
+            //first we get the command of the robot
+            string command="";
+            i++;
+            while (message[i]!=' ' && message[i]!=')') {
+                command+=message[i];
+                i++;
+            }
 
-	    std::cout<<"command "<<command<<"\n";
-	    if (command=="stop") {
-		client.cancelGoal();
-		status="not moving";
-    string strmessage="(Navigation.stop.report OK)";
-    char returnMessage[50];
-    strcpy(returnMessage,strmessage.c_str());
-    ROS_INFO("Return message %s",returnMessage);
-    send_message_string(returnMessage,dest.c_str());
-	    }
-	    else if (status!="moving") {
-		
-		vector<geometry_msgs::PoseStamped> posesStamped=getMoveMessage(message,i);
-		moveRobotThread=new boost::thread(moveRobot,posesStamped, &client);
-	    }
-	}
+            std::cout<<"command "<<command<<"\n";
+            if (command=="stop") {
+                client.cancelGoal();
+                status="not moving";
+                string strmessage="(Navigation.stop.report OK)";
+                char returnMessage[50];
+                strcpy(returnMessage,strmessage.c_str());
+                ROS_INFO("Return message %s",returnMessage);
+                send_message_string(returnMessage,dest.c_str());
+            }
+            else if (command=="moveSeconds") {
+                i++;
+                string stringSeconds="";
+                while (message[i]!=' ') {
+                    stringSeconds=stringSeconds+message[i];
+                    i++;
+                }
+                i++;
+                string direction;
+                while (message[i]!=')') {
+                    direction=message[i];
+                    i++;
+                }
+
+                timedMove(boost::lexical_cast<double>(stringSeconds), boost::lexical_cast<char>(direction));
+
+            }
+            else if (status!="moving") {
+                vector<geometry_msgs::PoseStamped> posesStamped=getMoveMessage(message,i);
+                moveRobotThread=new boost::thread(moveRobot,posesStamped, &client);
+            }
+        }
     }
     else {
       ROS_INFO("error in connecting to the message passer. Closing the node");
