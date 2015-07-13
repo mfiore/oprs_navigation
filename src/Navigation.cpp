@@ -41,6 +41,71 @@ ros::Publisher cmd_vel_pub_;
 
 static string dest="OPRS_SUP";
 
+
+
+// string getNext(char *message, int *i) {
+//     string ret;
+//     while (message[*i]!=' ' && message[*i]!=')'){
+//         ret=ret+message[*i];
+//         (*i)++;
+//     }
+//     (*i)++;
+//     return ret;
+// }
+
+// vector<double> parseLispList(char *message, int *i) {
+//     (*i)++;
+//     (*i)++;
+//     (*i)++;
+//     vector<double> coord;
+//     string actualDouble="";
+//     while (message[*i]!='.') {
+//         if (message[*i]!=' ') {
+//             actualDouble=actualDouble+message[*i];
+//         }
+//         else {
+//             coord.push_back(stod(actualDouble));
+//             actualDouble="";
+//         }
+//     }
+//     (*i)++;
+//     (*i)++;
+//     return coord;
+// }
+
+
+// vector<geometry_msgs::PoseStamped> parseMoveMessage(char *message, int *i) {
+//     string mode=getNext(message,i);
+
+//     (*i)++;
+//     (*i)++;
+
+//   vector<geometry_msgs::PoseStamped>  posesStamped;
+
+
+//   while(message[*i]!=')') {
+//     if (message[*i]=='(') {
+//         vector<double> coord=parseLispList(message,i);
+//         geometry_msgs::PoseStamped aPoseStamped;
+
+//         //now we can actually fill the message =) . Code looks less crappy here YAI!
+//         aPoseStamped.header.stamp=ros::Time::now();
+//         aPoseStamped.header.frame_id="map";
+//         aPoseStamped.pose.position.x=coord[0];
+//         aPoseStamped.pose.position.y=coord[1];
+//         aPoseStamped.pose.position.z=0;
+//         double angle= coord[2];
+//         aPoseStamped.pose.orientation=tf::createQuaternionMsgFromRollPitchYaw(0.0,0.0,angle);
+
+//         posesStamped.push_back(aPoseStamped);
+
+//     }
+//     (*i)++;
+//   }
+//   return posesStamped;
+// }
+
+
 /**
    Get the next number in the message, skipping spaces. Takes as input the message and the current position, returning a float with the number and updating the position included in i accordingly.   
  */
@@ -56,6 +121,51 @@ float getNextNumber(char *message, int *i) {
   return boost::lexical_cast<float>(number);
 
 }
+
+
+vector<geometry_msgs::PoseStamped> getMoveMessageSmall(char * message, int i) {
+    //we start getting the mode of the message
+  
+  
+  vector<geometry_msgs::PoseStamped>  posesStamped;
+
+    string mode;
+    while (message[i]!=' ') { 
+    mode=mode+message[i];  
+        i++;
+    }
+    
+    while(message[i]!='.'){  
+    i++;                    
+    }
+    i++;
+    i++;
+
+    geometry_msgs::PoseStamped aPoseStamped;
+
+    aPoseStamped.header.stamp=ros::Time::now();
+    aPoseStamped.header.frame_id="map";
+    
+    aPoseStamped.pose.position.x=getNextNumber(message,&i);
+    i++;
+    aPoseStamped.pose.position.y=getNextNumber(message,&i);
+    i++;
+    aPoseStamped.pose.position.z=0.0;
+
+    double angle= getNextNumber(message,&i);
+    aPoseStamped.pose.orientation=tf::createQuaternionMsgFromRollPitchYaw(0.0,0.0,angle);
+      i++;
+
+    posesStamped.push_back(aPoseStamped);
+
+    return posesStamped;
+    }
+
+
+
+
+
+
 
 vector<geometry_msgs::PoseStamped> getMoveMessage(char * message, int i) {
     //we start getting the mode of the message
@@ -142,7 +252,7 @@ void moveRobot(vector<geometry_msgs::PoseStamped> posesStamped, Client *client) 
     //nowe we are actually going to send this stuff to move_base and update the supervisor step by step     
     int n=posesStamped.size();
     string response="OK";
-    
+    cout<<"Navigation through "<<n<<" "<<"poses"<<"\n";
     for (int i=0; i<n && response!="FAILURE"; i++) {
 	move_base_msgs::MoveBaseGoal goal;
 	goal.target_pose=posesStamped[i];
@@ -263,6 +373,9 @@ int main(int argc, char **argv) {
                 i++;
             }
 
+       //     getNext(message,&i);
+            // string command=getNext(message,&i);
+
             std::cout<<"command "<<command<<"\n";
             if (command=="stop") {
                 client.cancelGoal();
@@ -291,7 +404,7 @@ int main(int argc, char **argv) {
 
             }
             else if (status!="moving") {
-                vector<geometry_msgs::PoseStamped> posesStamped=getMoveMessage(message,i);
+                vector<geometry_msgs::PoseStamped> posesStamped=getMoveMessageSmall(message,i);
                 moveRobotThread=new boost::thread(moveRobot,posesStamped, &client);
             }
         }

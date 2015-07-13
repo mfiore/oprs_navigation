@@ -1,10 +1,26 @@
+# ## check c++11 / c++0x
+# include(CheckCXXCompilerFlag)
+# check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
+# check_cxx_compiler_flag("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+# if(COMPILER_SUPPORTS_CXX11)
+#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+# elseif(COMPILER_SUPPORTS_CXX0X)
+#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+# else()
+#     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+# endif()
+
+
 cmake_minimum_required(VERSION 2.8.3)
-project(navigation)
+project(oprs_navigation)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs move_base_msgs actionlib tf)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs move_base_msgs actionlib tf
+
+#spencer_control_msgs
+	)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -78,7 +94,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs move_base_msgs act
 catkin_package(
   # INCLUDE_DIRS include # "/home/mfiore/openrobots/include/openprs/"
 #  LIBRARIES handover
-   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime move_base_msgs actionlib
+   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime move_base_msgs actionlib spencer_control_msgs
 #  DEPENDS system_lib
 )
 
@@ -89,15 +105,17 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
- include_directories(include ${catkin_INCLUDE_DIRS} "/home/mfiore/openrobots_new/include/openprs/")
+ include_directories(include ${catkin_INCLUDE_DIRS} "/home/mfiore/openrobots/include/openprs/")
 
 ## Declare a cpp library
-# add_library(navigation
-#   src/${PROJECT_NAME}/navigation.cpp
+# add_library(oprs_navigation
+#   src/${PROJECT_NAME}/oprs_navigation.cpp
 # )
 
 ## Declare a cpp executable
  add_executable(Navigation src/Navigation.cpp)
+#  add_executable(control_speed src/ControlSpeed.cpp)
+
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -106,7 +124,11 @@ catkin_package(
 ## Specify libraries to link a library or executable target against
  target_link_libraries(Navigation
    ${catkin_LIBRARIES}
-   /home/mfiore/openrobots_new/lib/libExtMP.a
+   /home/mfiore/openrobots/lib/libExtMP.a
+ )
+ target_link_libraries(control_speed
+   ${catkin_LIBRARIES}
+   /home/mfiore/openrobots/lib/libExtMP.a
  )
 
 #############
