@@ -126,10 +126,10 @@ catkin_package(
    ${catkin_LIBRARIES}
    /home/mfiore/openrobots/lib/libExtMP.a
  )
- target_link_libraries(control_speed
-   ${catkin_LIBRARIES}
-   /home/mfiore/openrobots/lib/libExtMP.a
- )
+ # target_link_libraries(control_speed
+ #   ${catkin_LIBRARIES}
+ #   /home/mfiore/openrobots/lib/libExtMP.a
+ # )
 
 #############
 ## Install ##

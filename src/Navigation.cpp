@@ -351,7 +351,7 @@ int main(int argc, char **argv) {
 
 
     //connect to openprs
-    int mpSocket=external_register_to_the_mp_prot("Navigation", 3300, STRINGS_PT);
+    int mpSocket=external_register_to_the_mp_host_prot("Navigation", "maxc2",3300, STRINGS_PT);
     if (mpSocket!=-1) {
 
         while (ros::ok()) {
